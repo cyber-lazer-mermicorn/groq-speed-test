@@ -1,8 +1,21 @@
 import Groq from 'groq-sdk';
 import OpenAI from 'openai';
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+function getGroqClient(): Groq {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    throw new Error('GROQ_API_KEY is required to run a Groq benchmark.');
+  }
+  return new Groq({ apiKey });
+}
+
+function getOpenAIClient(): OpenAI {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY is required to run an OpenAI benchmark.');
+  }
+  return new OpenAI({ apiKey });
+}
 
 export interface BenchmarkResult {
   provider: string;
@@ -16,7 +29,7 @@ export interface BenchmarkResult {
 export async function benchmarkGroq(prompt: string): Promise<BenchmarkResult> {
   try {
     const start = Date.now();
-    const response = await groq.chat.completions.create({
+    const response = await getGroqClient().chat.completions.create({
       model: 'llama-3.3-70b-versatile',
       messages: [{ role: 'user', content: prompt }],
       max_tokens: 1024,
@@ -40,7 +53,7 @@ export async function benchmarkGroq(prompt: string): Promise<BenchmarkResult> {
 export async function benchmarkOpenAI(prompt: string): Promise<BenchmarkResult> {
   try {
     const start = Date.now();
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAIClient().chat.completions.create({
       model: 'gpt-4-turbo-preview',
       messages: [{ role: 'user', content: prompt }],
       max_tokens: 1024,
@@ -85,7 +98,7 @@ export async function streamBenchmark(provider: 'groq' | 'openai', prompt: strin
     let tokenCount = 0;
 
     if (provider === 'groq') {
-      const stream = await groq.chat.completions.create({
+      const stream = await getGroqClient().chat.completions.create({
         model: 'llama-3.3-70b-versatile',
         messages: [{ role: 'user', content: prompt }],
         stream: true,
@@ -94,7 +107,7 @@ export async function streamBenchmark(provider: 'groq' | 'openai', prompt: strin
         if (chunk.choices[0]?.delta?.content) tokenCount++;
       }
     } else {
-      const stream = await openai.chat.completions.create({
+      const stream = await getOpenAIClient().chat.completions.create({
         model: 'gpt-4-turbo-preview',
         messages: [{ role: 'user', content: prompt }],
         stream: true,
